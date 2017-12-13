@@ -1,0 +1,28 @@
+{
+  "name": "cache-control",
+  "version": "0.0.1",
+  "description": "A simple Cache control to share data between controllers and views with an internal EventEmitter.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/CreativeSlave/CacheControl.git"
+  },
+  "keywords": [
+    "cache",
+    "eventemitter",
+    "javascript",
+    "mvc",
+    "meteor",
+    "ng",
+    "react"
+  ],
+  "author": "Drew Ambrose",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/CreativeSlave/CacheControl/issues"
+  },
+  "homepage": "https://github.com/CreativeSlave/CacheControl#readme"
+}
