@@ -1,7 +1,71 @@
 
-import {Session} from 'meteor/session';
+/**
+ * Prevent console errors with recursive calls while using JSON.stringify()
+ * @param obj
+ * @param replacer
+ * @param spaces
+ * @param replicator
+ */
+let stringify = function(obj, replacer, spaces, replicator) {
+    return JSON.stringify(obj, serializer(replacer, replicator), 2);
+}
 
-//// console.clear();
+function serializer (replacer, replicator) {
+    let stack = [];
+    let keys = [];
+    if (!replicator) replicator = function (key, value) {
+        if (stack[0] === value) return "[Circular_Reference]";
+        return "[Circular_Reference." + keys.slice(0, stack.indexOf(value)).join(".") + "]";
+    };
+
+    return function (key, value) {
+        if (stack.length > 0) {
+            let index = stack.indexOf(this);
+            ~index ? stack.splice(index + 1) : stack.push(this);
+            ~index ? keys.splice(index, Infinity, key) : keys.push(key);
+            if (~stack.indexOf(value)) value = replicator.call(this, key, value);
+        }
+        else stack.push(value);
+        return replacer == null ? value : replacer.call(this, key, value);
+    };
+}
+
+let utility = {
+    copy : function(object){
+        return JSON.parse(stringify(object));
+    },
+    wait : function(count, func){
+        let dtn = (new Date()).getTime() + count;
+
+        console.log(`Waiting ${count} milliseconds.`);
+        console.log(` > Start:  `,(new Date()).getTime());
+        while((new Date()).getTime() < dtn){}
+        console.log(` > Finish: `,(new Date()).getTime());
+        if(func) func();
+        return;
+    },
+    /**
+     * When "Expression function" returns true, execute callback.
+     * ```js
+     * utility.until( function(){ return true }, then);
+     * ```
+     * @param expression
+     * @param onReady
+     * @param checkInterval
+     */
+    when : function(expression, onConditionMet, checkInterval= 100) {
+        let timeoutId = "";
+        var checkFunc = function() {
+            if(expression()) {
+                clearTimeout(timeoutId);
+                onConditionMet();
+            } else {
+                timeoutId = setTimeout(checkFunc, checkInterval);
+            }
+        };
+        checkFunc();
+    }
+};
 
 /**
  * CacheItem EventEmitter
@@ -29,7 +93,7 @@ class CacheEventEmitter {
 
     /**
      * subscribe to onChange event
-     * Add a function to a list of functions..
+     * set a function to a list of functions..
      * The "listenerFunction" is a function that is called when the onChange function is called.
      * There can be many of these, so this will be an item in an array of listeners/functions.
      * @param listenerFunction
@@ -88,10 +152,6 @@ class CacheEventEmitter {
 }
 
 class CacheItem {
-    created = null;
-    updated = null;
-    requested = null;
-    _data = {};
     constructor(parent, name, data = {}){
         /**
          * Parent Object is also a CacheItem
@@ -113,14 +173,14 @@ class CacheItem {
         this.updated = new Date();
         // Session.set(this.name, this);
         // this._parent.persist();
-        this.emitter.data = data;
+        this.emitter.data = utility.copy(data);
     }
     subscribe(listenerFunction){
         this.emitter.subscribe(listenerFunction);
     }
 }
 
-let CacheFactory = (function CacheFactory () {
+module.exports = CacheFactory = (function CacheFactory () {
     let instance;
     const CACHE_CONTAINER = "NPS_CACHE_CONTAINER";
     function CacheFactory () {
@@ -130,7 +190,7 @@ let CacheFactory = (function CacheFactory () {
         };
         cache.startUp = new Date();
         /**
-         * Add or Update Cache
+         * set or Update Cache
          * @param componentName
          * @param data
          */
@@ -143,9 +203,9 @@ let CacheFactory = (function CacheFactory () {
          * @param data
          * @returns {CacheFactory}
          */
-        cache.add = function Save_Item_Cache (componentName, data) {
+        cache.set = function Save_Item_Cache (componentName, data) {
             let component = cache.name(componentName);
-            // console.info(`Cache: Add  "${component}"`);
+            // console.info(`Cache: set  "${component}"`);
             let timestamp = new Date();
             let componentData = new CacheItem(cache, component, data);
             //// console.log(`${componentData}`)
@@ -157,69 +217,78 @@ let CacheFactory = (function CacheFactory () {
             }
             return cache.persist;
         };
-        cache.persist = function Persist_All_Data_In_Session_VOID (){
-            Session.set(CACHE_CONTAINER, cache.components);
-            return cache;
+        /**
+         * @deprecated
+         */
+        cache.persist = function Persist_All_Data_In_Session_$VOID (){
+            // TODO: Remove cache.persist
         }
         /**
+         * # Has
          * @return {boolean}
          */
-        cache.has = function Has_Cache_BOOLEAN (componentName) {
+        cache.has = function Has_Cache_$BOOLEAN (componentName) {
             // console.log(`Cache: Has  "${cache.name(componentName)}"`);
             return (cache.components[cache.name(componentName)]) ? true : false;
         };
-        cache.get = function Get_Cache_Data_OBJECT (componentName) {
+        /**
+         * ## Get
+         * This will return a copy of the data.
+         * You cannot change the data here. It is immutable.
+         * @param componentName
+         * @returns {*}
+         */
+        cache.get = function Get_Cache_Data_$OBJECT (componentName) {
             //// console.log(`Cache: Get  "${cache.name(componentName)}"`);
             let response = cache.components[cache.name(componentName)];
             // console.log(` > Cache Data: ${cache.name(componentName)}`, response.data);
             if(!response){
-                // console.warn("cache.get failed because cache.get( '"+componentName+"' ) was not found.")
+                console.warn("cache.get failed because cache.get( '"+componentName+"' ) was not found.")
             }
-            return response.data;
+            return utility.copy(response.data);
         };
-        cache.getItem = function Get_Cache_OBJECT (componentName) {
+        cache.getItem = function Get_Cache_$OBJECT (componentName) {
             //// console.log(`Cache: Get  "${cache.name(componentName)}"`);
             let response = cache.components[cache.name(componentName)];
             // console.log(` > Cache Data: ${cache.name(componentName)}`, response);
             if(!response){
-                // console.warn("cache.getItem failed because cache.get( '"+componentName+"' ) was not found.")
+                console.warn("cache.getItem failed because cache.get( '"+componentName+"' ) was not found.")
             }
             return response;
         };
-        cache.subscribe = function subscribe(componentName, subscriberFunction){
+        cache.subscribe = function Subscribe_Function_To_EventEmitter(componentName, subscriberFunction){
             // console.log("cache.subscribe of CacheFactory")
             let cacheItem = cache.components[cache.name(componentName)];
             if(cacheItem){
                 cacheItem.subscribe(subscriberFunction);
             } else {
-                // console.warn("cache.subscribe failed because cache.get( '"+componentName+"' ) was not found.")
+                console.warn("cache.subscribe failed because cache.get( '"+componentName+"' ) was not found.")
             }
 
         }
         return {
             since		: cache.startUp,
             subscribe	: cache.subscribe,
-            add			: cache.add,
+            set			: cache.set,
             has			: cache.has,
             getCache	: cache.getItem,
-            save		: cache.add,
             get			: cache.get
         };
     }
     let init = function Initialize_CacheFactory(){
 
-        // console.groupCollapsed(`CacheFactory: init`);
-        // console.time(`CacheFactory: init`);
+        if(console.groupCollapsed) console.groupCollapsed(`CacheFactory: init`);
+        if(console.time) console.time(`CacheFactory: init`);
         instance = new CacheFactory();
-        let cacheContainer = Session.get(CACHE_CONTAINER) || {};
-        instance.components = cacheContainer;
-        // console.log(instance);
-        // console.timeEnd(`CacheFactory: init`);
-        // console.groupEnd();
+        // let cacheContainer = Session.get(CACHE_CONTAINER) || {};
+        // instance.components = cacheContainer;
+        console.log(instance);
+        if(console.timeEnd) console.timeEnd(`CacheFactory: init`);
+        if(console.groupEnd) console.groupEnd();
     };
 
     return {
-        getInstance: function () {
+        getInstance: function Get_Instance_Of_CacheFactory() {
             if (!instance) {
                 init();
             }
