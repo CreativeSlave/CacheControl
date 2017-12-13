@@ -26,8 +26,14 @@ EventEmitter: Invoked on 'root'
 `);
     console.log(data)
     // let data = object.data;
-    console.log(`The author, namely ${data.author}, wanted to create a tool for himself named: ${data.name}. 
-    There are many other tools, but he wanted to keep it simple. So many others grow in complexity so fast they quickly become undesirable. It's purpose is as stated: "${data.description}". It is currently at version: ${data.version} and can be found at ${data.repository}.`)
+    console.log(`
+    
+    The author, namely ${data.author}, wanted to create a tool for himself named: ${data.name}. 
+    There are many other tools, but he wanted to keep it simple. 
+    
+    So many others grow in complexity so fast they quickly become undesirable. 
+    It's purpose is as stated: "${data.description}". It is currently at version: ${data.version} 
+    and can be found at ${data.repository}.`)
 });
 
 
@@ -51,5 +57,11 @@ let data = {
     repository: "git+https://github.com/CreativeSlave/CacheControl.git",
     children: []
 };
+
+
+
 // Let's test this out
-setTimeout(()=>{cacheControl.set("root", data);},3000);
+setTimeout(()=>{
+    cacheControl.set("root", data);
+},3000);
+

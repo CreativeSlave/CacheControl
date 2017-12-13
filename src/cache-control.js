@@ -30,6 +30,55 @@ function serializer (replacer, replicator) {
     };
 }
 
+
+module.exports = function Sync(){
+    var pause = this;
+    let PAUSE = {
+        _count:3000,
+        _continue: true,
+        resume(when){
+            if(when){
+                when(PAUSE._continue);
+            } else {
+                PAUSE._continue = true
+            }
+        },
+        /**
+         * Pause indenfinitely until resume() is called.
+         * @param func
+         */
+        pause(func){
+            while(!PAUSE._continue){};
+            if(func) func();
+            return;
+        },
+        /**
+         * Pause until count is complete.
+         * @param count
+         * @param func
+         */
+        until(count, func){
+            PAUSE._count = count || 3000;
+            let dtn = (new Date()).getTime();
+            function getFutureTime(){
+                return dtn + PAUSE._count;
+            }
+            while((new Date()).getTime() < getFutureTime()){};
+            if(func) func();
+            return;
+        }
+    }
+    return {
+        pause: PAUSE.pause,
+        until: PAUSE.until,
+        resume: PAUSE.resume,
+    };
+}
+
+
+
+
+
 let utility = {
     copy : function(object){
         return JSON.parse(stringify(object));
@@ -86,6 +135,7 @@ class CacheEventEmitter {
         this.listeners = [];
         this._data = data;
         this.__map = {};
+        this.__pause = false;
         this._onErrorEvent = onError || function (error){
             // console.error(error);
         };
@@ -104,17 +154,18 @@ class CacheEventEmitter {
             //if(!this.__map[listenerFunction]){
             //  this.__map[listenerFunction] =
             this.listeners.push(listenerFunction);
-            listenerFunction(this._data);
+            listenerFunction(utility.copy(this._data));
             //}
         }
         // Always return the data in case change events have already occured.
-        //return this._data;
+        return utility.copy(this._data);
     }
-    publish(){
-        // console.log(`EventEmitter: $${this.name}.publish()`);
-        let len = this.listeners.length;
-        for(let i=0; i<len; i++){
-            let subscriberFunction = this.listeners[i];
+    unsubscribeAll(){
+        this.listeners = [];
+    }
+    _push(subscriberFunction){
+        // console.log(`EventEmitter: $${this.name}.push( subscriberFunction )`);
+        if(!this.__pause){
             try{
                 // console.log(`EventEmitter: ${this.name}.call( { data } )`);
                 subscriberFunction(this._data);
@@ -124,8 +175,13 @@ class CacheEventEmitter {
         }
     }
     onChange(data){
-        //// console.log(`EventEmitter: $${name}.publish()`);
-        this.publish();
+        // console.log(`EventEmitter: $${name}.publish()`);
+        if(!this.__pause){
+            let len = this.listeners.length;
+            for(let i=0; i<len; i++){
+                this._push(this.listeners[i]);
+            }
+        }
     }
 
     /**
@@ -177,6 +233,10 @@ class CacheItem {
     }
     subscribe(listenerFunction){
         this.emitter.subscribe(listenerFunction);
+        return this; // Chain back to CacheItem
+    }
+    unsubscribe(listenerFunction){
+        this.emitter.unsubscribeAll();
         return this; // Chain back to CacheItem
     }
 }
@@ -254,15 +314,34 @@ module.exports = CacheFactory = (function CacheFactory () {
             // Return ONLY a copy!
             return utility.copy(response.data);
         };
-        // cache.getItem = function Get_Cache_$OBJECT (componentName) {
-        //     //// console.log(`Cache: Get  "${cache.name(componentName)}"`);
-        //     let response = cache.components[cache.name(componentName)];
-        //     // console.log(` > Cache Data: ${cache.name(componentName)}`, response);
-        //     if(!response){
-        //         console.warn("cache.getItem failed because cache.get( '"+componentName+"' ) was not found.")
-        //     }
-        //     return response;
-        // };
+        cache.getItem = function Get_Cache_$OBJECT (componentName) {
+            //// console.log(`Cache: Get  "${cache.name(componentName)}"`);
+            let cacheItem = cache.components[cache.name(componentName)];
+            // console.log(` > Cache Data: ${cache.name(componentName)}`, response);
+            if(!cacheItem){
+                let warning = "cache.getItem failed because cache.get( '"+componentName+"' ) was not found.";
+                console.warn(warning);
+                return {
+                    name: componentName,
+                    data: {},
+                    error: warning
+                }
+            } else {
+                let setData = function(data){
+                    cacheItem.data = data;
+                }
+                /**
+                 * Return CacheItem API
+                 */
+                return {
+                    data         : utility.copy(cacheItem.data),
+                    setData,
+                    subscribe    : cacheItem.subscribe,
+                    unsubscribe  : cacheItem.unsubscribe,
+                };
+            }
+
+        };
         cache.subscribe = function Subscribe_Function_To_EventEmitter(componentName, subscriberFunction){
             // console.log("cache.subscribe of CacheFactory")
             let cacheItem = cache.components[cache.name(componentName)];
@@ -273,13 +352,31 @@ module.exports = CacheFactory = (function CacheFactory () {
             }
 
         }
+        cache.unsubscribe = function Unsubscribe_From_ALL_EventEmitters (componentName){
+            // console.log("cache.subscribe of CacheFactory")
+            let cacheItem = cache.components[cache.name(componentName)];
+            if(cacheItem){
+                cacheItem.unsubscribe();
+            } else {
+                console.warn("!! ATTENTION: cache.subscribe( ... ) failed because cache.get( '"+componentName+"' ) was not found!!")
+            }
+
+        }
+        cache.list = function(){
+            console.log(cache.components);
+        }
+        /**
+         * Return CacheControl API
+         */
         return {
             since		: cache.startUp,
             subscribe	: cache.subscribe,
             unsubscribe	: cache.unsubscribe,
             set			: cache.set,
             exists		: cache.exists,
-            get			: cache.get
+            get			: cache.get,
+            getItem		: cache.getItem,
+            list		: cache.list,
         };
     }
     let init = function Initialize_CacheFactory(){

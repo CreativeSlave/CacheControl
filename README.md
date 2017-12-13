@@ -35,10 +35,6 @@ cacheControl.set("root", data);
 // Get a COPY of the data for root. This is immutable data returned from 'cacheControl.get'!
 cacheControl.get("root");
 
-// Get the CacheItem object for root.
-// This may be removed, as it is a bit unsafe.
-// This WILL allow you to change the data and will kick off EventEmitters if you set the data.
-cacheControl.getCache("root");
 
 ```
 
@@ -55,6 +51,8 @@ cacheControl.set("root", {
 
 // Subscribe to updates of the data usnig a Simple EventEmitter
 cacheControl.subscribe("root", (data)=>console.log(data) );
+// Currently, this will unsubscribe ALL subscribers from the CacheItem returned by passing root.
+cacheControl.unsubscribe("root");
 
 // Another Example: Subscribe to updates of the data usnig a Simple EventEmitter
 cacheControl.subscribe("root", function(data) { 
