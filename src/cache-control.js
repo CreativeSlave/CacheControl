@@ -6,7 +6,7 @@
  * @param spaces
  * @param replicator
  */
-let stringify = function(obj, replacer, spaces, replicator) {
+const stringify = function(obj, replacer, spaces, replicator) {
     return JSON.stringify(obj, serializer(replacer, replicator), 2);
 }
 
@@ -70,7 +70,7 @@ let utility = {
 /**
  * CacheItem EventEmitter
  * This is a data value first and foremost.
- * It has an event manager as its intended purpose.
+ * It exists an event manager as its intended purpose.
  */
 class CacheEventEmitter {
     /**
@@ -171,12 +171,13 @@ class CacheItem {
     set data(data){
         //// console.log(`CacheItem set $${this.name}.data`, "this.emitter", this.emitter);
         this.updated = new Date();
-        // Session.set(this.name, this);
         // this._parent.persist();
         this.emitter.data = utility.copy(data);
+        return this; // Chain back to CacheItem
     }
     subscribe(listenerFunction){
         this.emitter.subscribe(listenerFunction);
+        return this; // Chain back to CacheItem
     }
 }
 
@@ -190,7 +191,8 @@ module.exports = CacheFactory = (function CacheFactory () {
         };
         cache.startUp = new Date();
         /**
-         * set or Update Cache
+         * Normalize the Component Name
+         * Set to Lowercase, and Replace spaces really...
          * @param componentName
          * @param data
          */
@@ -198,37 +200,35 @@ module.exports = CacheFactory = (function CacheFactory () {
             return componentName.toString().toLowerCase().trim().replace(/ /g, '_');
         };
         /**
-         * Save cache
+         * Set and Save data to cache.data
+         * Only saves a copy
          * @param componentName
          * @param data
          * @returns {CacheFactory}
          */
-        cache.set = function Save_Item_Cache (componentName, data) {
+        cache.set = function Save_Item_Cache_$VOID (componentName, data) {
             let component = cache.name(componentName);
-            // console.info(`Cache: set  "${component}"`);
-            let timestamp = new Date();
-            let componentData = new CacheItem(cache, component, data);
-            //// console.log(`${componentData}`)
-            if (cache.has(componentName)) {
-                componentData.created = cache.components[component];
-                cache.components[component].data = componentData;
+            if (cache.exists(componentName)) {
+                cache.components[component].data = data;
             } else {
+                let componentData = new CacheItem(cache, component, data)
                 cache.components[component] = componentData;
             }
-            return cache.persist;
+            return this;  // Chain back to CacheFactory
         };
         /**
          * @deprecated
          */
         cache.persist = function Persist_All_Data_In_Session_$VOID (){
             // TODO: Remove cache.persist
+            return this;  // Chain back to CacheFactory
         }
         /**
-         * # Has
+         * # exists
          * @return {boolean}
          */
-        cache.has = function Has_Cache_$BOOLEAN (componentName) {
-            // console.log(`Cache: Has  "${cache.name(componentName)}"`);
+        cache.exists = function exists_Cache_$BOOLEAN (componentName) {
+            // console.log(`Cache: exists  "${cache.name(componentName)}"`);
             return (cache.components[cache.name(componentName)]) ? true : false;
         };
         /**
@@ -243,35 +243,42 @@ module.exports = CacheFactory = (function CacheFactory () {
             let response = cache.components[cache.name(componentName)];
             // console.log(` > Cache Data: ${cache.name(componentName)}`, response.data);
             if(!response){
-                console.warn("cache.get failed because cache.get( '"+componentName+"' ) was not found.")
+                let warning = "cache.get failed because cache.get( '"+componentName+"' ) was not found.";
+                console.warn(warning)
+                response = {
+                    name: componentName,
+                    data: {},
+                    error: warning
+                }
             }
+            // Return ONLY a copy!
             return utility.copy(response.data);
         };
-        cache.getItem = function Get_Cache_$OBJECT (componentName) {
-            //// console.log(`Cache: Get  "${cache.name(componentName)}"`);
-            let response = cache.components[cache.name(componentName)];
-            // console.log(` > Cache Data: ${cache.name(componentName)}`, response);
-            if(!response){
-                console.warn("cache.getItem failed because cache.get( '"+componentName+"' ) was not found.")
-            }
-            return response;
-        };
+        // cache.getItem = function Get_Cache_$OBJECT (componentName) {
+        //     //// console.log(`Cache: Get  "${cache.name(componentName)}"`);
+        //     let response = cache.components[cache.name(componentName)];
+        //     // console.log(` > Cache Data: ${cache.name(componentName)}`, response);
+        //     if(!response){
+        //         console.warn("cache.getItem failed because cache.get( '"+componentName+"' ) was not found.")
+        //     }
+        //     return response;
+        // };
         cache.subscribe = function Subscribe_Function_To_EventEmitter(componentName, subscriberFunction){
             // console.log("cache.subscribe of CacheFactory")
             let cacheItem = cache.components[cache.name(componentName)];
             if(cacheItem){
                 cacheItem.subscribe(subscriberFunction);
             } else {
-                console.warn("cache.subscribe failed because cache.get( '"+componentName+"' ) was not found.")
+                console.warn("!! ATTENTION: cache.subscribe( ... ) failed because cache.get( '"+componentName+"' ) was not found!!")
             }
 
         }
         return {
             since		: cache.startUp,
             subscribe	: cache.subscribe,
+            unsubscribe	: cache.unsubscribe,
             set			: cache.set,
-            has			: cache.has,
-            getCache	: cache.getItem,
+            exists		: cache.exists,
             get			: cache.get
         };
     }
@@ -280,8 +287,6 @@ module.exports = CacheFactory = (function CacheFactory () {
         if(console.groupCollapsed) console.groupCollapsed(`CacheFactory: init`);
         if(console.time) console.time(`CacheFactory: init`);
         instance = new CacheFactory();
-        // let cacheContainer = Session.get(CACHE_CONTAINER) || {};
-        // instance.components = cacheContainer;
         console.log(instance);
         if(console.timeEnd) console.timeEnd(`CacheFactory: init`);
         if(console.groupEnd) console.groupEnd();

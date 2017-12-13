@@ -10,7 +10,11 @@ const LEVEL = {
 	none       : 0
 };
 
-logger = {};
+/**
+ * logger: ConsoleExtender
+ * @type {{}}
+ */
+let logger = {};
 
 /**
  * Prevent console errors with recursive calls while using JSON.stringify()
@@ -44,7 +48,7 @@ function serializer (replacer, replicator) {
 }
 
 /**
- * TestFactory is a chainable class alowing simple tests
+ * TestFactory is a chain-able class allowing simple [INLINE] tests
  * @param description
  * @param expression
  * @returns {{description: *, expression: *, testExpression: string, result: boolean, toBe: toBe, toContain: toContain,
@@ -135,7 +139,7 @@ function TestFactory (description, expression, logger) {
 	return expressionTest;
 };
 
-utility = {
+let utility = {
     copy : function(object){
         return JSON.parse(stringify(object));
     },
@@ -341,24 +345,23 @@ utility.extractFileTraceInfo = function (str) {
 			return logger;
 		},
 		enabled        : function isLoggerLevelEnabled (level) {
-			// console.info("Is Logger Enabled? Level"+ level+": "+level <= logger.level);
-			return true; //level <= logger.level;
+			return console && level <= logger.level;
 		},
 		start          : function startGroup (label) {
 			if (logger.enabled(LEVEL.info)) {
 				if (logger.collapsed) {
-					console.groupCollapsed(label);
+					if(console.groupCollapsed) console.groupCollapsed(label);
 				} else {
-					console.group(label);
+					if(console.group) console.group(label);
 				}
-				console.time(label);
+				if(console.time) console.time(label);
 			}
 			return logger;
 		},
 		failedStart          : function startGroup (label) {
 			if (logger.enabled(LEVEL.info)) {
 				if (logger.collapsed) {
-					console.groupCollapsed("%c"+label+"                                                                                                    ",`
+					if(console.groupCollapsed) console.groupCollapsed("%c"+label+"                                                                                                    ",`
 								background: #f5f5f5;
 								border-radius:3px;
 								color: darkred;
@@ -370,7 +373,7 @@ utility.extractFileTraceInfo = function (str) {
 								line-height:28px;
 								min-width:400px;`);
 				} else {
-					console.group("%c"+label+         "                                                                                                    ",`
+					if(console.group) console.group("%c"+label+         "                                                                                                    ",`
 								background: #f5f5f5;
 								border-radius:3px;
 								color: darkred;
@@ -382,7 +385,7 @@ utility.extractFileTraceInfo = function (str) {
 								line-height:28px;
 								min-width:400px;`);
 				}
-				console.time(label);
+				if(console.time) console.time(label);
 			}
 			return logger;
 		},
@@ -550,18 +553,18 @@ utility.extractFileTraceInfo = function (str) {
 	};
 	let loadingLabel = "Init Logger";
 	logger.start(loadingLabel);
-	if (Meteor.isProduction) {
+	//if (Meteor.isProduction) {
 		/**
 		 * Reducing logs to just warnings and errors.
 		 * @type {number}
 		 * @see ./logger.js
 		 */
-		logger.level = 3;
-		console.info("Running in Production Mode!");
-	} else {
-		logger.level = 4;
+	//	logger.level = 3;
+	//	console.info("Running in Production Mode!");
+	//} else {
+		logger.level = 10;
 		console.info("Running in Development Mode!");
-	}
+	//}
 	logger.log("ConsoleExtend instantiated at level: " + logger.level);
 	logger.end(loadingLabel);
 })();

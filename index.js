@@ -23,7 +23,11 @@ cacheControl.subscribe("root", function(data){
 ***************************************
 EventEmitter: Invoked on 'root'
 ***************************************
-`, data);
+`);
+    console.log(data)
+    // let data = object.data;
+    console.log(`The author, namely ${data.author}, wanted to create a tool for himself named: ${data.name}. 
+    There are many other tools, but he wanted to keep it simple. So many others grow in complexity so fast they quickly become undesirable. It's purpose is as stated: "${data.description}". It is currently at version: ${data.version} and can be found at ${data.repository}.`)
 });
 
 
@@ -38,11 +42,14 @@ Now updating data in root
  * This is just an example of adding any kind of object.
  * @type {{author: string, startUp: Date, description: string, version: string, repository: string, children: Array}}
  */
-cacheControl.getCache("root").data = {
+let data = {
     author: "Drew Ambrose",
+    name: "CacheControl",
     startUp: new Date(),
     description: "A simple Cache control to share data between controllers and views with an internal EventEmitter.",
     version: "0.0.1",
     repository: "git+https://github.com/CreativeSlave/CacheControl.git",
     children: []
 };
+// Let's test this out
+setTimeout(()=>{cacheControl.set("root", data);},3000);
