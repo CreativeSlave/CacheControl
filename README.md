@@ -3,6 +3,12 @@
 CacheControl and EventEmiter for any JS Project
 It's a simple Cache control to share data between controllers and views with an internal EventEmitter.
 
+*@see* [/src/cache-control.js](/src/cache-control.js) 
+
+Also, a custom logger 
+    *@see* [/src/logger.js](/src/logger.js) 
+
+
 
 ## Basic Usage Examples
 Import/require and Get the Instance
