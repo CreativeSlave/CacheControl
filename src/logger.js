@@ -1,3 +1,5 @@
+let utility = require("./utilities");
+
 const LEVEL = {
 	development: 8,
 	verbose    : 7,
@@ -59,10 +61,9 @@ function serializer (replacer, replicator) {
 function TestFactory (description, expression, logger) {
 	if (!description && !expression) {
 		console.warn("You have attempted to call console.toBe without setting " +
-								 "console.expect. \nYour expression should look like this:\n" +
-								 "console.expect('My bike tires colors',{ bike.tires.color }).toBe('black');");
-	}
-	;
+			 "console.expect. \nYour expression should look like this:\n" +
+			 "console.expect('My bike tires colors',{ bike.tires.color }).toBe('black');");
+	};
 	
 	let expressionTest = {
 		description   : description,
@@ -139,42 +140,6 @@ function TestFactory (description, expression, logger) {
 	return expressionTest;
 };
 
-let utility = {
-    copy : function(object){
-        return JSON.parse(stringify(object));
-    },
-    wait : function(count, func){
-        let dtn = (new Date()).getTime() + count;
-
-        console.log(`Waiting ${count} milliseconds.`);
-        console.log(` > Start:  `,(new Date()).getTime());
-        while((new Date()).getTime() < dtn){}
-        console.log(` > Finish: `,(new Date()).getTime());
-        if(func) func();
-        return;
-    },
-    /**
-	 * When "Expression function" returns true, execute callback.
-     * ```js
-	 * utility.until( function(){ return true }, then);
-	 * ```
-     * @param expression
-     * @param onReady
-     * @param checkInterval
-     */
-    when : function(expression, onConditionMet, checkInterval= 100) {
-        let timeoutId = "";
-        var checkFunc = function() {
-            if(expression()) {
-                clearTimeout(timeoutId);
-                onConditionMet();
-            } else {
-                timeoutId = setTimeout(checkFunc, checkInterval);
-            }
-        };
-        checkFunc();
-    }
-};
 utility.time = {
 	initial: new Date(),
 	/**
@@ -420,8 +385,8 @@ utility.extractFileTraceInfo = function (str) {
 		},
 		end            : function GroupEnd (label) {
 			if (logger.enabled(LEVEL.info)) {
-				console.timeEnd(label);
-				console.groupEnd();
+				if(console.timeEnd) console.timeEnd(label);
+                if(console.groupEnd) console.groupEnd();
 			}
 			return logger;
 		},
@@ -568,4 +533,7 @@ utility.extractFileTraceInfo = function (str) {
 	logger.log("ConsoleExtend instantiated at level: " + logger.level);
 	logger.end(loadingLabel);
 })();
+logger.log("logger loaded");
 
+
+module.exports = { logger, LEVEL, TestFactory };

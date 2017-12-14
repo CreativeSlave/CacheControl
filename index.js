@@ -1,6 +1,8 @@
+let LoggerModule = require("./src/logger");
 let CacheFactory = require("./src/cache-control");
 
-cacheControl = CacheFactory.getInstance();
+let logger = LoggerModule.logger;
+let cacheControl = CacheFactory.getInstance();
 /**
  * Testing
  */
@@ -24,9 +26,9 @@ cacheControl.subscribe("root", function(data){
 EventEmitter: Invoked on 'root'
 ***************************************
 `);
-    console.log(data)
+console.log(data)
     // let data = object.data;
-    console.log(`
+console.log(`
     
     The author, namely ${data.author}, wanted to create a tool for himself named: ${data.name}. 
     There are many other tools, but he wanted to keep it simple. 

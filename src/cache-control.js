@@ -1,125 +1,10 @@
-
-/**
- * Prevent console errors with recursive calls while using JSON.stringify()
- * @param obj
- * @param replacer
- * @param spaces
- * @param replicator
- */
-const stringify = function(obj, replacer, spaces, replicator) {
-    return JSON.stringify(obj, serializer(replacer, replicator), 2);
-}
-
-function serializer (replacer, replicator) {
-    let stack = [];
-    let keys = [];
-    if (!replicator) replicator = function (key, value) {
-        if (stack[0] === value) return "[Circular_Reference]";
-        return "[Circular_Reference." + keys.slice(0, stack.indexOf(value)).join(".") + "]";
-    };
-
-    return function (key, value) {
-        if (stack.length > 0) {
-            let index = stack.indexOf(this);
-            ~index ? stack.splice(index + 1) : stack.push(this);
-            ~index ? keys.splice(index, Infinity, key) : keys.push(key);
-            if (~stack.indexOf(value)) value = replicator.call(this, key, value);
-        }
-        else stack.push(value);
-        return replacer == null ? value : replacer.call(this, key, value);
-    };
-}
-
-
-module.exports = function Sync(){
-    var pause = this;
-    let PAUSE = {
-        _count:3000,
-        _continue: true,
-        resume(when){
-            if(when){
-                when(PAUSE._continue);
-            } else {
-                PAUSE._continue = true
-            }
-        },
-        /**
-         * Pause indenfinitely until resume() is called.
-         * @param func
-         */
-        pause(func){
-            while(!PAUSE._continue){};
-            if(func) func();
-            return;
-        },
-        /**
-         * Pause until count is complete.
-         * @param count
-         * @param func
-         */
-        until(count, func){
-            PAUSE._count = count || 3000;
-            let dtn = (new Date()).getTime();
-            function getFutureTime(){
-                return dtn + PAUSE._count;
-            }
-            while((new Date()).getTime() < getFutureTime()){};
-            if(func) func();
-            return;
-        }
-    }
-    return {
-        pause: PAUSE.pause,
-        until: PAUSE.until,
-        resume: PAUSE.resume,
-    };
-}
-
-
-
-
-
-let utility = {
-    copy : function(object){
-        return JSON.parse(stringify(object));
-    },
-    wait : function(count, func){
-        let dtn = (new Date()).getTime() + count;
-
-        console.log(`Waiting ${count} milliseconds.`);
-        console.log(` > Start:  `,(new Date()).getTime());
-        while((new Date()).getTime() < dtn){}
-        console.log(` > Finish: `,(new Date()).getTime());
-        if(func) func();
-        return;
-    },
-    /**
-     * When "Expression function" returns true, execute callback.
-     * ```js
-     * utility.until( function(){ return true }, then);
-     * ```
-     * @param expression
-     * @param onReady
-     * @param checkInterval
-     */
-    when : function(expression, onConditionMet, checkInterval= 100) {
-        let timeoutId = "";
-        var checkFunc = function() {
-            if(expression()) {
-                clearTimeout(timeoutId);
-                onConditionMet();
-            } else {
-                timeoutId = setTimeout(checkFunc, checkInterval);
-            }
-        };
-        checkFunc();
-    }
-};
+let { utility, Synchronize, stringify } = require("./utilities");
+let { logger, LEVEL } = require("./logger");
 
 /**
  * CacheItem EventEmitter
  * This is a data value first and foremost.
- * It exists an event manager as its intended purpose.
+ * It exists an event manager as its intendsed purpose.
  */
 class CacheEventEmitter {
     /**
@@ -130,14 +15,14 @@ class CacheEventEmitter {
      * @param onError
      */
     constructor(name, data = {}, onError){
-        //// console.log(`EventEmitter: ${name}.constructor()`);
+        //// logger.log(`EventEmitter: ${name}.constructor()`);
         this.name = name;
         this.listeners = [];
         this._data = data;
         this.__map = {};
         this.__pause = false;
         this._onErrorEvent = onError || function (error){
-            // console.error(error);
+            // logger.error(error);
         };
     }
 
@@ -149,7 +34,7 @@ class CacheEventEmitter {
      * @param listenerFunction
      */
     subscribe(listenerFunction){
-        // console.log(`EventEmitter: ${this.name}.subscribe(listenerFunction)`);
+        // logger.log(`EventEmitter: ${this.name}.subscribe(listenerFunction)`);
         if(listenerFunction && typeof listenerFunction === 'function'){
             //if(!this.__map[listenerFunction]){
             //  this.__map[listenerFunction] =
@@ -164,10 +49,10 @@ class CacheEventEmitter {
         this.listeners = [];
     }
     _push(subscriberFunction){
-        // console.log(`EventEmitter: $${this.name}.push( subscriberFunction )`);
+        // logger.log(`EventEmitter: $${this.name}.push( subscriberFunction )`);
         if(!this.__pause){
             try{
-                // console.log(`EventEmitter: ${this.name}.call( { data } )`);
+                // logger.log(`EventEmitter: ${this.name}.call( { data } )`);
                 subscriberFunction(this._data);
             } catch (subscriberFunctionError){
                 this._onErrorEvent(subscriberFunctionError);
@@ -175,7 +60,7 @@ class CacheEventEmitter {
         }
     }
     onChange(data){
-        // console.log(`EventEmitter: $${name}.publish()`);
+        // logger.log(`EventEmitter: $${name}.publish()`);
         if(!this.__pause){
             let len = this.listeners.length;
             for(let i=0; i<len; i++){
@@ -189,7 +74,7 @@ class CacheEventEmitter {
      * @param data
      */
     updateWithoutPublish(data){
-        //// console.log(`EventEmitter: $${this.name}.updateWithoutPublish()`);
+        //// logger.log(`EventEmitter: $${this.name}.updateWithoutPublish()`);
         this._data = data;
     }
     /**
@@ -197,12 +82,12 @@ class CacheEventEmitter {
      * @param data
      */
     set data(data){
-        //// console.log(`EventEmitter: set $${this.name}.data`);
+        //// logger.log(`EventEmitter: set $${this.name}.data`);
         this._data = data;
         this.onChange(data)
     }
     get data(){
-        //// console.log(`EventEmitter: get $${this.name}.data`);
+        //// logger.log(`EventEmitter: get $${this.name}.data`);
         return this._data;
     }
 }
@@ -220,12 +105,12 @@ class CacheItem {
         this.emitter = new CacheEventEmitter(name, data);
     }
     get data(){
-        //// console.log(`CacheItem get $${this.name}.data`)
+        //// logger.log(`CacheItem get $${this.name}.data`)
         this.requested = new Date();
         return this.emitter.data;
     }
     set data(data){
-        //// console.log(`CacheItem set $${this.name}.data`, "this.emitter", this.emitter);
+        //// logger.log(`CacheItem set $${this.name}.data`, "this.emitter", this.emitter);
         this.updated = new Date();
         // this._parent.persist();
         this.emitter.data = utility.copy(data);
@@ -241,11 +126,12 @@ class CacheItem {
     }
 }
 
-module.exports = CacheFactory = (function CacheFactory () {
+const CacheFactory = (function CacheFactory () {
     let instance;
-    const CACHE_CONTAINER = "NPS_CACHE_CONTAINER";
+    const CACHE_CONTAINER = "CACHE_CONTAINER";
     function CacheFactory () {
         let cache = this;
+        // logger.log("initialize CacheFactory")
         cache.components = {
             root: new CacheItem("root", {})
         };
@@ -288,7 +174,7 @@ module.exports = CacheFactory = (function CacheFactory () {
          * @return {boolean}
          */
         cache.exists = function exists_Cache_$BOOLEAN (componentName) {
-            // console.log(`Cache: exists  "${cache.name(componentName)}"`);
+            // logger.log(`Cache: exists  "${cache.name(componentName)}"`);
             return (cache.components[cache.name(componentName)]) ? true : false;
         };
         /**
@@ -299,12 +185,12 @@ module.exports = CacheFactory = (function CacheFactory () {
          * @returns {*}
          */
         cache.get = function Get_Cache_Data_$OBJECT (componentName) {
-            //// console.log(`Cache: Get  "${cache.name(componentName)}"`);
+            //// logger.log(`Cache: Get  "${cache.name(componentName)}"`);
             let response = cache.components[cache.name(componentName)];
-            // console.log(` > Cache Data: ${cache.name(componentName)}`, response.data);
+            // logger.log(` > Cache Data: ${cache.name(componentName)}`, response.data);
             if(!response){
                 let warning = "cache.get failed because cache.get( '"+componentName+"' ) was not found.";
-                console.warn(warning)
+                logger.warn(warning)
                 response = {
                     name: componentName,
                     data: {},
@@ -315,12 +201,12 @@ module.exports = CacheFactory = (function CacheFactory () {
             return utility.copy(response.data);
         };
         cache.getItem = function Get_Cache_$OBJECT (componentName) {
-            //// console.log(`Cache: Get  "${cache.name(componentName)}"`);
+            //// logger.log(`Cache: Get  "${cache.name(componentName)}"`);
             let cacheItem = cache.components[cache.name(componentName)];
-            // console.log(` > Cache Data: ${cache.name(componentName)}`, response);
+            // logger.log(` > Cache Data: ${cache.name(componentName)}`, response);
             if(!cacheItem){
                 let warning = "cache.getItem failed because cache.get( '"+componentName+"' ) was not found.";
-                console.warn(warning);
+                logger.warn(warning);
                 return {
                     name: componentName,
                     data: {},
@@ -343,27 +229,27 @@ module.exports = CacheFactory = (function CacheFactory () {
 
         };
         cache.subscribe = function Subscribe_Function_To_EventEmitter(componentName, subscriberFunction){
-            // console.log("cache.subscribe of CacheFactory")
+            // logger.log("cache.subscribe of CacheFactory")
             let cacheItem = cache.components[cache.name(componentName)];
             if(cacheItem){
                 cacheItem.subscribe(subscriberFunction);
             } else {
-                console.warn("!! ATTENTION: cache.subscribe( ... ) failed because cache.get( '"+componentName+"' ) was not found!!")
+                logger.warn("!! ATTENTION: cache.subscribe( ... ) failed because cache.get( '"+componentName+"' ) was not found!!")
             }
 
         }
         cache.unsubscribe = function Unsubscribe_From_ALL_EventEmitters (componentName){
-            // console.log("cache.subscribe of CacheFactory")
+            // logger.log("cache.subscribe of CacheFactory")
             let cacheItem = cache.components[cache.name(componentName)];
             if(cacheItem){
                 cacheItem.unsubscribe();
             } else {
-                console.warn("!! ATTENTION: cache.subscribe( ... ) failed because cache.get( '"+componentName+"' ) was not found!!")
+                logger.warn("!! ATTENTION: cache.subscribe( ... ) failed because cache.get( '"+componentName+"' ) was not found!!")
             }
 
         }
         cache.list = function(){
-            console.log(cache.components);
+            logger.log(cache.components);
         }
         /**
          * Return CacheControl API
@@ -380,13 +266,9 @@ module.exports = CacheFactory = (function CacheFactory () {
         };
     }
     let init = function Initialize_CacheFactory(){
-
-        if(console.groupCollapsed) console.groupCollapsed(`CacheFactory: init`);
-        if(console.time) console.time(`CacheFactory: init`);
+        // logger.start(`CacheFactory`);
         instance = new CacheFactory();
-        console.log(instance);
-        if(console.timeEnd) console.timeEnd(`CacheFactory: init`);
-        if(console.groupEnd) console.groupEnd();
+        // logger.log(instance).end(`CacheFactory`);
     };
 
     return {
@@ -398,3 +280,5 @@ module.exports = CacheFactory = (function CacheFactory () {
         }
     };
 })();
+
+module.exports = CacheFactory;

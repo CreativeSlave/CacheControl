@@ -1,5 +1,4 @@
 
-
 /**
  * Prevent console errors with recursive calls while using JSON.stringify()
  * @param obj
@@ -7,7 +6,7 @@
  * @param spaces
  * @param replicator
  */
-const stringify = function(obj, replacer, spaces, replicator) {
+function stringify(obj, replacer, spaces, replicator) {
     function serializer (replacer, replicator) {
         let stack = [];
         let keys = [];
@@ -30,13 +29,11 @@ const stringify = function(obj, replacer, spaces, replicator) {
     return JSON.stringify(obj, serializer(replacer, replicator), 2);
 }
 
-
-
 /**
  * Synchronize code with pause, resume, until, and when
  * @returns {{Synchronize: sync.pause, until: sync.until, resume: sync.resume}}
  */
-module.exports = function Synchronize(){
+function Synchronize(){
     let sync = {
         _count:500,
         _continue: true,
@@ -52,7 +49,7 @@ module.exports = function Synchronize(){
          * @param func
          */
         pause(func){
-            setInterval
+
             while(!sync._continue){};
             if(func) func();
             return;
@@ -141,3 +138,4 @@ let utility = {
     }
 };
 
+module.exports = { utility, Synchronize, stringify };
