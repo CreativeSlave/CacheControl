@@ -1,10 +1,11 @@
 {
   "name": "cache-control",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "A simple Cache control to share data between controllers and views with an internal EventEmitter.",
   "main": "index.js",
   "scripts": {
-    "test": "node index.js"
+    "test": "node index.js",
+    "git": "git status && git add -A && git commit -m \"Auto Update \" && git status"
   },
   "repository": {
     "type": "git",
