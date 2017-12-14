@@ -5,7 +5,7 @@
   "main": "index.js",
   "scripts": {
     "test": "node index.js",
-    "git": "git status && git add -A && git commit -m \"Auto Update \" && git status"
+    "git": "git status && git add -A && git commit -m \"Auto Update \" && git status && git push"
   },
   "repository": {
     "type": "git",
