@@ -1,5 +1,6 @@
 let { utility, Synchronize, stringify } = require("./utilities");
 let { logger, LEVEL } = require("./logger");
+let polyfills = require("./polyfills");
 
 /**
  * CacheItem EventEmitter
